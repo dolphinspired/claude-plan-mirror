@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# PostToolUse hook for Write
-# When a file is written to GLOBAL_PLANS_PATH, mirrors it to LOCAL_PLANS_FOLDER in the current
-# project directory. Repeated writes to the same source file overwrite the same destination,
-# tracked via CACHE_FILE_PATH in the local plans folder.
+# PostToolUse hook for Write and Edit
+# When a file is written or edited under GLOBAL_PLANS_PATH, mirrors it to LOCAL_PLANS_FOLDER in
+# the current project directory. The destination is tracked via an HTML comment marker embedded
+# in the source file itself — no external cache needed.
 
 GLOBAL_PLANS_PATH="$HOME/.claude/plans"
 LOCAL_PLANS_FOLDER="plans"
-CACHE_FILE_PATH="$(dirname "$0")/.mirror_cache.json"
+
+PLAN_MIRROR_MARKER='<!-- mirror-plan-to: %s -->'
+PLAN_MIRROR_PATTERN="${PLAN_MIRROR_MARKER//%s/\\([^ ]*\\)}"
+# PLAN_MIRROR_PATTERN → "<!-- mirror-plan-to: \([^ ]*\) -->"
 
 # Reads stdin, extracts the written file path, and validates it is under GLOBAL_PLANS_PATH.
 # Prints the file path if valid, empty string otherwise.
@@ -17,23 +20,33 @@ read_plan() {
     [[ "$file_path" == "$GLOBAL_PLANS_PATH/"* ]] && echo "$file_path"
 }
 
+# Given a source file and local plans dir, extracts the dest filename from the mirror marker.
+# Prints the full absolute destination path if found, empty string otherwise.
+get_mirror_dest() {
+    local file="$1" plans_dir="$2"
+    local dest_filename
+    dest_filename=$(sed -n "s/.*${PLAN_MIRROR_PATTERN}.*/\1/p" "$file" | head -1)
+    [[ -n "$dest_filename" ]] && echo "$plans_dir/$dest_filename"
+}
+
 # Given a source file path, returns the absolute destination path in the local plans folder.
-# Checks CACHE_FILE_PATH first; creates a new timestamped entry if not found.
+# Reads the mirror marker from the source file; appends a new marker if none is found.
 get_plan_path() {
     local file_path="$1"
-    local plans_dir dest cache
+    local plans_dir dest
     plans_dir="$(pwd)/$LOCAL_PLANS_FOLDER"
     mkdir -p "$plans_dir"
 
-    cache=$([[ -f "$CACHE_FILE_PATH" ]] && cat "$CACHE_FILE_PATH" || echo '{}')
+    dest=$(get_mirror_dest "$file_path" "$plans_dir")
 
-    dest=$(printf '%s' "$cache" | jq -r --arg k "$file_path" '.[$k] // empty')
     if [[ -z "$dest" ]]; then
-        local repo_name timestamp
+        local repo_name timestamp dest_filename
         repo_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | tr ' -' '_' | tr -cd '[:alnum:]_')
         timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        dest="$plans_dir/${repo_name}_${timestamp}.md"
-        printf '%s' "$cache" | jq --arg k "$file_path" --arg v "$dest" '.[$k] = $v' > "$CACHE_FILE_PATH"
+        dest_filename="${repo_name}_${timestamp}.md"
+        dest="$plans_dir/$dest_filename"
+        # shellcheck disable=SC2059
+        printf "\n${PLAN_MIRROR_MARKER}\n" "$dest_filename" >> "$file_path"
     fi
 
     echo "$dest"
