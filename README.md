@@ -22,7 +22,7 @@ On subsequent writes to the same source file, the hook overwrites the same desti
 **1. Copy the hook script:**
 
 ```bash
-cp mirror_plan.sh ~/.claude/hooks/mirror_plan.sh
+cp src/mirror_plan.sh ~/.claude/hooks/mirror_plan.sh
 ```
 
 **2. Add the hook to `~/.claude/settings.json`:**
@@ -49,12 +49,13 @@ Merge with any existing `PostToolUse` hooks — don't replace the array.
 
 ## Configuration
 
-Two variables at the top of `mirror_plan.sh` control the paths:
+Two variables at the top of `src/mirror_plan.sh` control the paths:
 
 | Variable | Default | Description |
 |---|---|---|
 | `GLOBAL_PLANS_PATH` | `$HOME/.claude/plans` | Where Claude writes plan files |
 | `LOCAL_PLANS_FOLDER` | `plans` | Subdirectory within the project root to mirror into |
+| `CACHE_FILE_PATH` | `$(dirname "$0")/.mirror_cache.json` | Full path to the global cache file tracking source → destination mappings (lives alongside the installed script) |
 
 ## Testing
 

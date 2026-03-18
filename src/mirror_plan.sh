@@ -2,10 +2,11 @@
 # PostToolUse hook for Write
 # When a file is written to GLOBAL_PLANS_PATH, mirrors it to LOCAL_PLANS_FOLDER in the current
 # project directory. Repeated writes to the same source file overwrite the same destination,
-# tracked via .mirror_cache.json in the local plans folder.
+# tracked via CACHE_FILE_PATH in the local plans folder.
 
 GLOBAL_PLANS_PATH="$HOME/.claude/plans"
 LOCAL_PLANS_FOLDER="plans"
+CACHE_FILE_PATH="$(dirname "$0")/.mirror_cache.json"
 
 # Reads stdin, extracts the written file path, and validates it is under GLOBAL_PLANS_PATH.
 # Prints the file path if valid, empty string otherwise.
@@ -17,27 +18,25 @@ read_plan() {
 }
 
 # Given a source file path, returns the absolute destination path in the local plans folder.
-# Checks .mirror_cache.json first; creates a new timestamped entry if not found.
+# Checks CACHE_FILE_PATH first; creates a new timestamped entry if not found.
 get_plan_path() {
     local file_path="$1"
-    local plans_dir cache_file src_key cache dest_name
+    local plans_dir dest cache
     plans_dir="$(pwd)/$LOCAL_PLANS_FOLDER"
     mkdir -p "$plans_dir"
 
-    cache_file="$plans_dir/.mirror_cache.json"
-    src_key=$(basename "$file_path")
-    cache=$([[ -f "$cache_file" ]] && cat "$cache_file" || echo '{}')
+    cache=$([[ -f "$CACHE_FILE_PATH" ]] && cat "$CACHE_FILE_PATH" || echo '{}')
 
-    dest_name=$(printf '%s' "$cache" | jq -r --arg k "$src_key" '.[$k] // empty')
-    if [[ -z "$dest_name" ]]; then
+    dest=$(printf '%s' "$cache" | jq -r --arg k "$file_path" '.[$k] // empty')
+    if [[ -z "$dest" ]]; then
         local repo_name timestamp
         repo_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | tr ' -' '_' | tr -cd '[:alnum:]_')
         timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        dest_name="${repo_name}_${timestamp}.md"
-        printf '%s' "$cache" | jq --arg k "$src_key" --arg v "$dest_name" '.[$k] = $v' > "$cache_file"
+        dest="$plans_dir/${repo_name}_${timestamp}.md"
+        printf '%s' "$cache" | jq --arg k "$file_path" --arg v "$dest" '.[$k] = $v' > "$CACHE_FILE_PATH"
     fi
 
-    echo "$plans_dir/$dest_name"
+    echo "$dest"
 }
 
 # Copies the source plan to the destination path and logs the result.
