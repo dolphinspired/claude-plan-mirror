@@ -1,62 +1,23 @@
 # claude-plan-mirror
 
-A Claude Code hook that mirrors plan files from `~/.claude/plans/` into the current project's `plans/` directory, with stable filenames across repeated writes.
+```
+This README is human-generated.
+```
 
-## What it does
+I got tired of fighting with Claude's context to get it to consistently write plan files to the current directory before executing them. This is my attempt at a deterministic fix. Whenever a Write tool is used on `~/.claude/plans` (where Claude places plan files by default), that file is then mirrored to the "plans" folder in the current working directory (presumably repo root), suffixed with a timestamp.
 
-When Claude writes a plan file to `~/.claude/plans/`, this hook:
+Some notes about the implementation:
 
-1. Generates a destination filename: `<repo-name>_<ISO-timestamp>.md`
-2. Copies the file to `<project-root>/plans/`
-3. Records the source → destination mapping in `plans/.mirror_cache.json`
-
-On subsequent writes to the same source file, the hook overwrites the same destination rather than creating a new one. This keeps the `plans/` directory clean across plan revisions.
+* We hook into the Write tool because I could not find a hook for a plan file being generated. So this script runs on every Write, but only acts on writes to Claude's global plans folder. Maybe there will be a better hook in a future Claude Code release.
+* The script maintains a small JSON cache that maps global plan file paths to project plan file paths. This is so subsequent attempts to one global plan file will be reflected in the same project-level plan file.
+* You may need to change the directory from `~/.claude/plans/` if your setup is different. Read [CLAUDE.md](./CLAUDE.md) for implementation details.
 
 ## Requirements
 
-- [`jq`](https://jqlang.github.io/jq/) must be available on `PATH`
-- Claude Code
+Assumes you're running Claude Code and have [`jq`](https://jqlang.github.io/jq/) available in your `PATH`.
 
 ## Installation
 
-**1. Copy the hook script:**
+Easiest way is probably just to ask Claude to "install and verify the hook". They're smart enough. I'm sure they can figure it out. (in other words, instructions are in [CLAUDE.md](./CLAUDE.md))
 
-```bash
-cp src/mirror_plan.sh ~/.claude/hooks/mirror_plan.sh
-```
-
-**2. Add the hook to `~/.claude/settings.json`:**
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/mirror_plan.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Merge with any existing `PostToolUse` hooks — don't replace the array.
-
-## Configuration
-
-Two variables at the top of `src/mirror_plan.sh` control the paths:
-
-| Variable | Default | Description |
-|---|---|---|
-| `GLOBAL_PLANS_PATH` | `$HOME/.claude/plans` | Where Claude writes plan files |
-| `LOCAL_PLANS_FOLDER` | `plans` | Subdirectory within the project root to mirror into |
-| `CACHE_FILE_PATH` | `$(dirname "$0")/.mirror_cache.json` | Full path to the global cache file tracking source → destination mappings (lives alongside the installed script) |
-
-## Testing
-
-See `CLAUDE.md` — testing requires Claude to trigger the hook by writing a file, so the test procedure is described there for Claude to follow directly.
+Since this relies on Claude's hooks to work, you have to let them test it.

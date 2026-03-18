@@ -4,6 +4,54 @@ This repo contains `src/mirror_plan.sh`, a Claude Code `PostToolUse` hook for th
 
 See `README.md` for installation instructions.
 
+## What it does
+
+When Claude writes a plan file to `~/.claude/plans/`, this hook:
+
+1. Generates a destination filename: `<repo-name>_<ISO-timestamp>.md`
+2. Copies the file to `<project-root>/plans/`
+3. Records the source → destination mapping in `plans/.mirror_cache.json`
+
+On subsequent writes to the same source file, the hook overwrites the same destination rather than creating a new one. This keeps the `plans/` directory clean across plan revisions.
+
+## Configuration
+
+Environment variables at the top of `src/mirror_plan.sh` control the paths:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GLOBAL_PLANS_PATH` | `$HOME/.claude/plans` | Where Claude writes plan files |
+| `LOCAL_PLANS_FOLDER` | `plans` | Subdirectory within the project root to mirror into |
+| `CACHE_FILE_PATH` | `./.mirror_cache.json` | Full path to the global cache file tracking source → destination mappings (lives alongside the installed script) |
+
+**1. Copy the hook script:**
+
+```bash
+cp src/mirror_plan.sh ~/.claude/hooks/mirror_plan.sh
+```
+
+**2. Add the hook to `~/.claude/settings.json`:**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/mirror_plan.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Merge with any existing `PostToolUse` hooks — don't replace the array.
+
 ## Testing
 
 This hook can only be exercised by triggering Claude's `Write` tool — it cannot be tested with a standalone shell command because the hook fires as a side effect of Claude writing a file. To test it:
