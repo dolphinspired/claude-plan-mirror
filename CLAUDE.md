@@ -55,9 +55,9 @@ Tell Claude: _"Install and verify the hook"_ (or equivalent). Claude will:
 
 To verify the hook works end-to-end in real use:
 
-1. Enter plan mode by asking Claude to plan something non-trivial (e.g. _"Plan how you'd add a new feature to this project"_).
+1. Enter plan mode by asking Claude to plan something very simple (e.g. _"Plan how to write a script that prints 'X'"_).
 2. Claude will write a plan file to `~/.claude/plans/` and exit plan mode.
 3. Confirm a mirrored file appeared in `plans/` with the correct naming.
-4. Ask Claude to revise the plan (e.g. _"Update the plan to also cover X"_) — Claude will edit the existing plan file.
+4. Ask Claude to revise the plan (e.g. _"Update the script to print 'Y' instead"_) — Claude will edit the existing plan file.
 5. Confirm the same destination file was overwritten (no new file created).
 6. Clean up the test plan files if desired.
