@@ -52,10 +52,10 @@ get_plan_path() {
     echo "$dest"
 }
 
-# Copies the source plan to the destination path and logs the result.
+# Copies the source plan to the destination path, stripping the mirror marker, and logs the result.
 write_plan() {
     local src="$1" dest="$2"
-    cp "$src" "$dest"
+    grep -v "^${PLAN_MIRROR_PATTERN}$" "$src" > "$dest"
     echo "mirror_plan: wrote $dest" >&2
 }
 
