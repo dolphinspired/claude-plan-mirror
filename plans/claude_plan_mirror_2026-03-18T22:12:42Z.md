@@ -17,5 +17,3 @@ Make it executable: `chmod +x bark.sh`
 ## Verification
 
 Run `./bark.sh` — output should be a single line: `bark`.
-
-<!-- mirror-plan-to: claude_plan_mirror_2026-03-18T22:12:42Z.md -->
